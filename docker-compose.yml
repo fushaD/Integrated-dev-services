@@ -1,0 +1,163 @@
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: my_database
+      MYSQL_USER: user
+      MYSQL_PASSWORD: user_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - mynetwork
+    ports:
+      - "3310:3306"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest 
+    container_name: phpmyadmin
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "7000:80"
+    networks:
+      - mynetwork
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_DB: my_database
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - mynetwork
+    ports:
+      - "5450:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    depends_on:
+      - postgres
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "7001:80"
+    networks:
+      - mynetwork
+
+  mongo:
+    image: mongo:6
+    restart: always
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - ./db_data/:/data/db/
+      - /etc/timezone:/etc/timezone:ro
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    container_name: mongo_express
+    ports:
+      - 7002:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+
+  maildev:
+    image: maildev/maildev:latest
+    container_name: maildev
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    volumes:
+      - maildev-data:/data
+    networks:
+      - mynetwork
+      
+  redis:
+    image: redis:latest
+    container_name: redis
+    networks:
+      - mynetwork
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: redisinsight
+    ports:
+      - "7003:5540"
+    networks:
+      - mynetwork
+    depends_on:
+      - redis
+    volumes:
+      - redis-insight:/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - '9000:9000'
+      - '8900:8900'
+    volumes:
+      - minio-data:/data
+    networks:
+      - mynetwork
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
+    command: 'minio server /data/minio --console-address ":8900"'
+    healthcheck:
+            test:
+                - CMD
+                - curl
+                - '-f'
+                - 'http://localhost:9000/minio/health/live'
+            retries: 3
+            timeout: 5s
+
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    ports:
+      - "8001:80"
+    volumes:
+      - nextcloud-data:/var/www/html
+    networks:
+      - mynetwork
+    environment:
+      MYSQL_PASSWORD: user_password
+      MYSQL_ROOT_PASSWORD: root_password
+
+networks:
+  mynetwork:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  postgres-data:
+  mongodb-data:
+  redis-data:
+  maildev-data:
+  redis-insight:
+  minio-data:
+  nextcloud-data:
